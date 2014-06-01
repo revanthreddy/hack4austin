@@ -73,25 +73,54 @@ class Root(object):
    @cherrypy.expose
    def save_lesson_log(self, **kwargs):
       body = cherrypy.request.body.read()
+      if not body:
+         return json.dumps({'ok': False, 'error': 'no message body'})
       params = json.loads(body)
-      if 'teacher_id' not in params:
-         return json.dumps({'ok': False, 'error': 'teacher_id not given'})
-      if 'student_id' not in params:
-         return json.dumps({'ok': False, 'error': 'student_id not given'})
+      if 'teacherName' not in params:
+         return json.dumps({'ok': False, 'error': 'teacherName not given'})
+      if 'studentName' not in params:
+         return json.dumps({'ok': False, 'error': 'studentName not given'})
 
       if not params.get('submit'):
          result = self.save_to_mongo(params)
          return json.dumps(result)
 
-      soql = "select id from lesson__c where teacher__c='%s' and student__c='%s'" % (params['teacher_id'], params['student_id'])
+      # get teacher id
+      soql = "select id from teacher__c where name='%s'" % (params['teacherName'])
+      try:
+         teacher = self._sf.query(soql)
+      except Exception as ex:
+         return json.dumps({'ok': False, 'error': ex.message})
+
+      if len(teacher['records']) <= 0:
+         return json.dumps({'ok': False, 'error': 'teacherName not found'})
+      teacher_id = teacher['records'][0]['Id']
+
+      # get student id
+      soql = "select id from student__c where name='%s'" % (params['studentName'])
+      try:
+         student = self._sf.query(soql)
+      except Exception as ex:
+         return json.dumps({'ok': False, 'error': ex.message})
+
+      if len(student['records']) <= 0:
+         return json.dumps({'ok': False, 'error': 'studentName not found'})
+      student_id = student['records'][0]['Id']
+
+      # get lesson id
+      soql = "select id from lesson__c where teacher__c='%s' and student__c='%s'" % (teacher_id, student_id)
       try:
          lesson = self._sf.query(soql)
       except Exception as ex:
          return json.dumps({'ok': False, 'error': ex.message})
 
       data = {'name': str(datetime.now()),
-              'Teacher_s_Name__c': str(params['teacher_id']),
-              'student__c': params['student_id']
+              'Teacher_s_Name__c': teacher_id,
+              'student__c': student_id,
+              'life_skills__c': int(float(params.get('studentProgressMultipleSkills', '0'))),
+              'music_education__c': int(float(params.get('studentMusicProgressRank', '0'))),
+              'length_of_lesson__c': 0,
+              'lesson_notes__c': json.dumps(params, indent=0)
              }
 
       if len(lesson['records']) > 0:
@@ -116,7 +145,6 @@ class Root(object):
       lesson_id = json.loads(body)['lesson_id']
       try:
          lesson = mongo_db.lessons.find_one({'_id': ObjectId(lesson_id)})
-         p
          return json.dumps({'ok': True, 'results': lesson['params']})
       except Exception as ex:
          return json.dumps({'ok': False, 'error': ex.message})
