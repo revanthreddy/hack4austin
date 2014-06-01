@@ -71,7 +71,7 @@ class Root(object):
          return json.dumps({'ok': False, 'error': ex.message})
 
    @cherrypy.expose
-   def save_lesson_log(self, **kwargs):
+   def save_lesson_log(self, submit=None, **kwargs):
       body = cherrypy.request.body.read()
       if not body:
          return json.dumps({'ok': False, 'error': 'no message body'})
@@ -81,7 +81,7 @@ class Root(object):
       if 'studentName' not in params:
          return json.dumps({'ok': False, 'error': 'studentName not given'})
 
-      if not params.get('submit'):
+      if not submit:
          result = self.save_to_mongo(params)
          return json.dumps(result)
 
@@ -114,7 +114,7 @@ class Root(object):
       except Exception as ex:
          return json.dumps({'ok': False, 'error': ex.message})
 
-      data = {'name': str(datetime.now()),
+      data = {'name': str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
               'Teacher_s_Name__c': teacher_id,
               'student__c': student_id,
               'life_skills__c': int(float(params.get('studentProgressMultipleSkills', '0'))),
