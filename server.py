@@ -73,10 +73,7 @@ class Root(object):
    @cherrypy.expose
    def save_lesson_log(self, **kwargs):
       body = cherrypy.request.body.read()
-      if 'params' not in body:
-         return json.dumps({'ok': False, 'error': 'params not given'})
-      body = json.loads(body)
-      params = body['params']
+      params = json.loads(body)
       if 'teacher_id' not in params:
          return json.dumps({'ok': False, 'error': 'teacher_id not given'})
       if 'student_id' not in params:
